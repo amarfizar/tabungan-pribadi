@@ -112,15 +112,26 @@ class SavingGoalTest extends TestCase
         $other = User::factory()->create();
 
         $this->asUser($other)->getJson('/api/goals/'.$goal->id)
-            ->assertStatus(404);
+            ->assertStatus(404)
+            ->assertJsonPath('message', 'Target tabungan tidak ditemukan.');
 
         $this->asUser($other)
             ->putJson('/api/goals/'.$goal->id, ['name' => 'Diambil'])
-            ->assertStatus(404);
+            ->assertStatus(404)
+            ->assertJsonPath('message', 'Target tabungan tidak ditemukan.');
 
         $this->asUser($other)
             ->deleteJson('/api/goals/'.$goal->id)
-            ->assertStatus(404);
+            ->assertStatus(404)
+            ->assertJsonPath('message', 'Target tabungan tidak ditemukan.');
+    }
+
+    public function test_returns_404_when_goal_does_not_exist(): void
+    {
+        $this->asUser(User::factory()->create())
+            ->getJson('/api/goals/999999')
+            ->assertStatus(404)
+            ->assertJsonPath('message', 'Target tabungan tidak ditemukan.');
     }
 
     public function test_updates_goal_200(): void

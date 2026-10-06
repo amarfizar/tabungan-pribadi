@@ -3,7 +3,7 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { api } from '@/lib/api';
+import { api, apiErrorMessage } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/Card';
@@ -40,8 +40,8 @@ export default function GoalDetailPage() {
       if (response.data.success && response.data.data) {
         setGoal(response.data.data);
       }
-    } catch {
-      alert('Gagal memuat target');
+    } catch (err: unknown) {
+      alert(apiErrorMessage(err, 'Gagal memuat target'));
       router.push('/goals');
     } finally {
       setLoading(false);
@@ -59,7 +59,7 @@ export default function GoalDetailPage() {
       await api.updateGoal(goal.id, { status: newStatus as 'active' | 'completed' | 'archived' });
       await fetchGoal();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Gagal mengubah status');
+      alert(apiErrorMessage(err, 'Gagal mengubah status'));
     }
   };
 
@@ -69,7 +69,7 @@ export default function GoalDetailPage() {
       await api.deleteGoal(goal!.id);
       router.push('/goals');
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Gagal menghapus target');
+      alert(apiErrorMessage(err, 'Gagal menghapus target'));
     }
   };
 
@@ -91,12 +91,7 @@ export default function GoalDetailPage() {
       setDepositNote('');
       await fetchGoal();
     } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'response' in err) {
-        const axiosErr = err as { response?: { data?: { message?: string } } };
-        setDepositError(axiosErr.response?.data?.message ?? 'Gagal menyimpan setoran');
-      } else {
-        setDepositError('Gagal menyimpan setoran');
-      }
+      setDepositError(apiErrorMessage(err, 'Gagal menyimpan setoran'));
     } finally {
       setDepositLoading(false);
     }

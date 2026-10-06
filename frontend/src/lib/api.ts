@@ -201,6 +201,46 @@ class ApiClient {
 // Singleton instance
 export const api = new ApiClient();
 
+/**
+ * Pesan error yang aman ditampilkan ke pengguna dari kegagalan request API.
+ * Prioritas: pesan validasi field -> pesan error API -> pesan bawaan.
+ */
+export function apiErrorMessage(error: unknown, fallback: string): string {
+  if (error && typeof error === 'object' && 'response' in error) {
+    const response = (error as {
+      response?: { data?: { message?: string; errors?: Record<string, string[]> } };
+    }).response;
+
+    const firstValidationError = Object.values(response?.data?.errors ?? {})[0]?.[0];
+
+    return firstValidationError ?? response?.data?.message ?? fallback;
+  }
+
+  return fallback;
+}
+
+/**
+ * Ekstrak pesan validasi per field dari respons 422, hanya untuk field yang diminta.
+ */
+export function apiValidationErrors(error: unknown, fields: readonly string[]): Record<string, string> {
+  if (!error || typeof error !== 'object' || !('response' in error)) {
+    return {};
+  }
+
+  const errors =
+    (error as { response?: { data?: { errors?: Record<string, string[]> } } }).response?.data?.errors ?? {};
+
+  const result: Record<string, string> = {};
+
+  for (const field of fields) {
+    if (Array.isArray(errors[field]) && errors[field].length > 0) {
+      result[field] = errors[field][0];
+    }
+  }
+
+  return result;
+}
+
 // Initialize token from localStorage on client side
 if (typeof window !== 'undefined') {
   const storedToken = localStorage.getItem('access_token');

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { api } from '@/lib/api';
+import { api, apiErrorMessage, apiValidationErrors } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/Card';
@@ -80,12 +80,15 @@ export default function SettingsPage() {
         setProfileMessage(response.data.message ?? 'Gagal memperbarui profil');
       }
     } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'response' in err) {
-        const axiosErr = err as { response?: { data?: { message?: string } } };
-        setProfileMessage(axiosErr.response?.data?.message ?? 'Gagal memperbarui profil');
+      const fieldErrors = apiValidationErrors(err, Object.keys(profileData));
+
+      if (Object.keys(fieldErrors).length > 0) {
+        setProfileErrors(fieldErrors as Partial<Record<keyof typeof profileData, string>>);
       } else {
-        setProfileMessage('Gagal memperbarui profil');
+        setProfileMessage(apiErrorMessage(err, 'Gagal memperbarui profil'));
       }
+    } finally {
+      setProfileLoading(false);
     }
   };
 
@@ -108,15 +111,7 @@ export default function SettingsPage() {
         setPasswordMessage(response.data.message ?? 'Gagal mengubah password');
       }
     } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'response' in err) {
-        const axiosErr = err as {
-          response?: { data?: { message?: string; errors?: Record<string, string[]> } };
-        };
-        const firstError = Object.values(axiosErr.response?.data?.errors ?? {})[0]?.[0];
-        setPasswordMessage(firstError ?? axiosErr.response?.data?.message ?? 'Gagal mengubah password');
-      } else {
-        setPasswordMessage('Gagal mengubah password');
-      }
+      setPasswordMessage(apiErrorMessage(err, 'Gagal mengubah password'));
     } finally {
       setPasswordLoading(false);
     }

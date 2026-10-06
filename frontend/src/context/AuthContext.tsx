@@ -7,7 +7,7 @@ import React, {
   useEffect,
   ReactNode,
 } from 'react';
-import { api } from '@/lib/api';
+import { api, apiErrorMessage } from '@/lib/api';
 
 export interface User {
   id: number;
@@ -63,7 +63,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
-    const response = await api.login({ email, password });
+    const response = await api.login({ email, password }).catch((err: unknown) => {
+      throw new Error(apiErrorMessage(err, 'Login gagal'));
+    });
+
     if (response.data.success && response.data.data) {
       api.setToken(response.data.data.token);
       setUser(response.data.data.user);
@@ -73,7 +76,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const register = async (name: string, email: string, password: string) => {
-    const response = await api.register({ name, email, password });
+    const response = await api.register({ name, email, password }).catch((err: unknown) => {
+      throw new Error(apiErrorMessage(err, 'Registrasi gagal'));
+    });
+
     if (response.data.success && response.data.data) {
       api.setToken(response.data.data.token);
       setUser(response.data.data.user);

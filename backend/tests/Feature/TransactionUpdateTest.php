@@ -92,7 +92,7 @@ class TransactionUpdateTest extends TestCase
                 'transaction_date' => now()->toDateString(),
             ])
             ->assertStatus(404)
-            ->assertJsonPath('message', 'Data tidak ditemukan.');
+            ->assertJsonPath('message', 'Transaksi tidak ditemukan.');
 
         $this->assertDatabaseHas('transactions', [
             'id' => $transaction->id,

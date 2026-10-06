@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { api } from '@/lib/api';
+import { api, apiErrorMessage, apiValidationErrors } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/Card';
@@ -55,21 +55,12 @@ export default function CreateGoalPage() {
       router.push('/goals');
       router.refresh();
     } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'response' in err) {
-        const axiosErr = err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } };
-        if (axiosErr.response?.data?.errors) {
-          const fieldErrors: Partial<Record<keyof FormData, string>> = {};
-          Object.entries(axiosErr.response.data.errors).forEach(([key, messages]) => {
-            if (key in formData) {
-              fieldErrors[key as keyof FormData] = messages[0];
-            }
-          });
-          setErrors(fieldErrors);
-        } else {
-          alert(axiosErr.response?.data?.message ?? 'Gagal membuat target');
-        }
+      const fieldErrors = apiValidationErrors(err, Object.keys(formData));
+
+      if (Object.keys(fieldErrors).length > 0) {
+        setErrors(fieldErrors as Partial<Record<keyof FormData, string>>);
       } else {
-        alert('Gagal membuat target');
+        alert(apiErrorMessage(err, 'Gagal membuat target'));
       }
     } finally {
       setLoading(false);

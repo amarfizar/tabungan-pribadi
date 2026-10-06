@@ -2,7 +2,7 @@
 
 import React, { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { api } from '@/lib/api';
+import { api, apiErrorMessage, apiValidationErrors } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -113,22 +113,13 @@ function CreateTransactionForm() {
       router.push('/transactions');
       router.refresh();
     } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'response' in err) {
-        const axiosErr = err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } };
-        if (axiosErr.response?.data?.errors) {
-          const fieldErrors: Partial<Record<keyof FormData, string>> = {};
-          Object.entries(axiosErr.response.data.errors).forEach(([key, messages]) => {
-            if (key in formData) {
-              fieldErrors[key as keyof FormData] = messages[0];
-            }
-          });
-          setErrors(fieldErrors);
-        } else {
-          setErrors({ amount: axiosErr.response?.data?.message ?? 'Gagal menyimpan transaksi' });
-        }
-      } else {
-        setErrors({ amount: 'Gagal menyimpan transaksi' });
-      }
+      const fieldErrors = apiValidationErrors(err, Object.keys(formData));
+
+      setErrors(
+        Object.keys(fieldErrors).length > 0
+          ? (fieldErrors as Partial<Record<keyof FormData, string>>)
+          : { amount: apiErrorMessage(err, 'Gagal menyimpan transaksi') }
+      );
     } finally {
       setLoading(false);
     }

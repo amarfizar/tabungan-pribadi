@@ -13,6 +13,9 @@ class DashboardController extends Controller
 {
     use ApiResponse;
 
+    /** Jumlah kategori pengeluaran terbesar yang ditampilkan di dashboard (PRD §5.3). */
+    private const TOP_EXPENSE_CATEGORIES = 5;
+
     /**
      * Dashboard ringkas (PRD §28).
      *
@@ -34,6 +37,9 @@ class DashboardController extends Controller
         return $this->successResponse([
             'balance' => $request->user()->balance(),
             'monthly' => $totals,
+            'expense_categories' => collect(
+                $request->user()->categoryBreakdown($month, $year, Transaction::TYPE_EXPENSE)
+            )->take(self::TOP_EXPENSE_CATEGORIES)->all(),
             'recent_transactions' => TransactionResource::collection(
                 $request->user()->recentTransactions(5)
             ),

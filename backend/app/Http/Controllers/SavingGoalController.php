@@ -144,6 +144,6 @@ class SavingGoalController extends Controller
      */
     private function ensureOwned(Request $request, SavingGoal $goal): void
     {
-        abort_unless($goal->user_id === (int) $request->user()->id, 404);
+        abort_unless($goal->user_id === (int) $request->user()->id, 404, 'Target tabungan tidak ditemukan.');
     }
 }

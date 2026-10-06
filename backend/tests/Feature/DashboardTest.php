@@ -60,10 +60,71 @@ class DashboardTest extends TestCase
             'data' => [
                 'balance',
                 'monthly' => ['income', 'expense', 'saving', 'balance'],
+                'expense_categories' => [],
                 'recent_transactions' => [],
                 'active_goals' => [],
             ],
         ]);
+    }
+
+    public function test_returns_top_expense_categories_of_the_month(): void
+    {
+        $user = User::factory()->create();
+        $now = now();
+
+        Transaction::factory()->for($user)->create([
+            'category' => 'Makanan',
+            'amount' => 400000,
+            'transaction_date' => $now->toDateString(),
+        ]);
+        Transaction::factory()->for($user)->create([
+            'category' => 'Makanan',
+            'amount' => 100000,
+            'transaction_date' => $now->toDateString(),
+        ]);
+        Transaction::factory()->for($user)->create([
+            'category' => 'Transportasi',
+            'amount' => 250000,
+            'transaction_date' => $now->toDateString(),
+        ]);
+        Transaction::factory()->for($user)->create([
+            'category' => 'Hiburan',
+            'amount' => 900000,
+            'transaction_date' => $now->subMonth()->toDateString(),
+        ]);
+
+        $response = $this->asUser($user)->getJson('/api/dashboard');
+
+        $response->assertStatus(200);
+
+        $categories = $response->json('data.expense_categories');
+
+        // Urut dari pengeluaran terbesar dan hanya memakai bulan berjalan.
+        $this->assertSame(['Makanan', 'Transportasi'], array_keys($categories));
+        $this->assertEquals(500000, $categories['Makanan']);
+        $this->assertEquals(250000, $categories['Transportasi']);
+    }
+
+    public function test_limits_expense_categories_on_dashboard_to_five(): void
+    {
+        $user = User::factory()->create();
+
+        foreach (['Makanan', 'Transportasi', 'Belanja', 'Tagihan', 'Hiburan', 'Kesehatan'] as $index => $category) {
+            Transaction::factory()->for($user)->create([
+                'category' => $category,
+                'amount' => ($index + 1) * 10000,
+                'transaction_date' => now()->toDateString(),
+            ]);
+        }
+
+        $response = $this->asUser($user)->getJson('/api/dashboard');
+
+        $response->assertStatus(200);
+
+        $categories = $response->json('data.expense_categories');
+
+        $this->assertCount(5, $categories);
+        $this->assertSame('Kesehatan', array_key_first($categories));
     }
 
     public function test_accepts_custom_month_and_year(): void

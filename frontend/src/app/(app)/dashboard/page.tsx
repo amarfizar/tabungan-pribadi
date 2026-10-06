@@ -16,6 +16,7 @@ interface DashboardData {
     saving: number;
     balance: number;
   };
+  expense_categories: Record<string, number>;
   recent_transactions: Array<{
     id: number;
     type: string;
@@ -166,6 +167,47 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Ringkasan Pengeluaran (PRD §5.3) — hanya ditampilkan bila ada data. */}
+        {Object.keys(data.expense_categories).length > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Ringkasan Pengeluaran</CardTitle>
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/statistics">Statistik Lengkap</Link>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {Object.entries(data.expense_categories)
+                  .slice(0, 3)
+                  .map(([category, amount]) => {
+                    const percentage =
+                      data.monthly.expense > 0
+                        ? Math.min(100, (amount / data.monthly.expense) * 100)
+                        : 0;
+
+                    return (
+                      <div key={category}>
+                        <div className="flex items-center justify-between text-sm mb-1">
+                          <span>{category}</span>
+                          <span className="font-medium">{formatRupiah(amount)}</span>
+                        </div>
+                        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-destructive transition-all duration-300"
+                            style={{ width: `${percentage}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Quick Actions */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">

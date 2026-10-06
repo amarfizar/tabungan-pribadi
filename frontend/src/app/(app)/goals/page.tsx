@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { api } from '@/lib/api';
+import { api, apiErrorMessage } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { Card, CardContent } from '@/components/ui/Card';
@@ -55,7 +55,7 @@ export default function GoalsPage() {
       await api.deleteGoal(id);
       fetchGoals();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Gagal menghapus target');
+      alert(apiErrorMessage(err, 'Gagal menghapus target'));
     }
   };
 

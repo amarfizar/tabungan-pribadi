@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { api } from '@/lib/api';
+import { api, apiErrorMessage } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -108,7 +108,7 @@ export default function TransactionsPage() {
       setLoading(true);
       fetchTransactions();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Gagal menghapus transaksi');
+      alert(apiErrorMessage(err, 'Gagal menghapus transaksi'));
     }
   };
 

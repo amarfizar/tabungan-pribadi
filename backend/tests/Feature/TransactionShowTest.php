@@ -49,14 +49,15 @@ class TransactionShowTest extends TestCase
         $this->asUser(User::factory()->create())
             ->getJson('/api/transactions/'.$transaction->id)
             ->assertStatus(404)
-            ->assertJsonPath('message', 'Data tidak ditemukan.');
+            ->assertJsonPath('message', 'Transaksi tidak ditemukan.');
     }
 
     public function test_returns_404_when_transaction_does_not_exist(): void
     {
         $this->asUser(User::factory()->create())
             ->getJson('/api/transactions/999999')
-            ->assertStatus(404);
+            ->assertStatus(404)
+            ->assertJsonPath('message', 'Transaksi tidak ditemukan.');
     }
 
     private function asUser(User $user): static

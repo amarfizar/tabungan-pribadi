@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -22,6 +23,21 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectGuestsTo(null);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Pesan 404 yang ramah untuk resource API (PRD §38).
+        $notFoundMessage = static function (NotFoundHttpException $exception): string {
+            $previous = $exception->getPrevious();
+
+            if ($previous instanceof ModelNotFoundException) {
+                return match (class_basename($previous->getModel())) {
+                    'SavingGoal' => 'Target tabungan tidak ditemukan.',
+                    'Transaction' => 'Transaksi tidak ditemukan.',
+                    default => 'Data tidak ditemukan.',
+                };
+            }
+
+            return $exception->getMessage() !== '' ? $exception->getMessage() : 'Data tidak ditemukan.';
+        };
+
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
@@ -51,14 +67,14 @@ return Application::configure(basePath: dirname(__DIR__))
             ], 401);
         });
 
-        $exceptions->render(function (NotFoundHttpException $exception, Request $request) {
+        $exceptions->render(function (NotFoundHttpException $exception, Request $request) use ($notFoundMessage) {
             if (! $request->is('api/*')) {
                 return null;
             }
 
             return response()->json([
                 'success' => false,
-                'message' => 'Data tidak ditemukan.',
+                'message' => $notFoundMessage($exception),
                 'errors' => [],
             ], 404);
         });

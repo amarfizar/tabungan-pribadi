@@ -33,7 +33,7 @@ class TransactionDeleteTest extends TestCase
         $this->asUser(User::factory()->create())
             ->deleteJson('/api/transactions/'.$transaction->id)
             ->assertStatus(404)
-            ->assertJsonPath('message', 'Data tidak ditemukan.');
+            ->assertJsonPath('message', 'Transaksi tidak ditemukan.');
 
         $this->assertDatabaseCount('transactions', 1);
     }

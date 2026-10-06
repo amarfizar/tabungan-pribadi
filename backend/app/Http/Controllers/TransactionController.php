@@ -173,7 +173,7 @@ class TransactionController extends Controller
      */
     private function ensureOwned(Request $request, Transaction $transaction): void
     {
-        abort_unless($transaction->user_id === (int) $request->user()->id, 404);
+        abort_unless($transaction->user_id === (int) $request->user()->id, 404, 'Transaksi tidak ditemukan.');
     }
 
     /**
