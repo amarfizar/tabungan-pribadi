@@ -7,6 +7,7 @@ use App\Http\Requests\DepositRequest;
 use App\Http\Requests\StoreGoalRequest;
 use App\Http\Requests\UpdateGoalRequest;
 use App\Http\Resources\SavingGoalResource;
+use App\Http\Resources\TransactionResource;
 use App\Models\SavingGoal;
 use App\Models\Transaction;
 use Illuminate\Http\JsonResponse;

@@ -96,6 +96,19 @@ class TransactionIndexTest extends TestCase
             ->assertJsonPath('data.total', 2);
     }
 
+    public function test_filters_by_category_200(): void
+    {
+        $user = User::factory()->create();
+        Transaction::factory()->for($user)->create(['type' => 'expense', 'category' => 'Makanan']);
+        Transaction::factory()->for($user)->create(['type' => 'expense', 'category' => 'Transportasi']);
+
+        $response = $this->asUser($user)->getJson('/api/transactions?type=expense&category=Makanan');
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.total', 1)
+            ->assertJsonPath('data.items.0.category', 'Makanan');
+    }
+
     public function test_returns_422_with_message_when_period_is_invalid(): void
     {
         $response = $this->asUser(User::factory()->create())

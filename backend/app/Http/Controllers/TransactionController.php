@@ -29,6 +29,7 @@ class TransactionController extends Controller
     {
         $filters = $request->validate([
             'type' => ['sometimes', 'string', Rule::in(Transaction::TYPES)],
+            'category' => ['sometimes', 'string', 'max:50'],
             'period' => ['sometimes', 'string', Rule::in(self::PERIODS)],
             'from' => ['sometimes', 'date'],
             'to' => ['sometimes', 'date'],
@@ -36,6 +37,7 @@ class TransactionController extends Controller
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ], [
             'type.in' => 'Jenis transaksi tidak valid.',
+            'category.max' => 'Kategori maksimal 50 karakter.',
             'period.in' => 'Periode tidak valid.',
             'from.date' => 'Format tanggal mulai tidak valid.',
             'to.date' => 'Format tanggal selesai tidak valid.',
@@ -52,6 +54,10 @@ class TransactionController extends Controller
 
         if (isset($filters['type'])) {
             $query->ofType($filters['type']);
+        }
+
+        if (isset($filters['category'])) {
+            $query->where('category', $filters['category']);
         }
 
         $transactions = $query->betweenDates($from, $to)
