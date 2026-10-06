@@ -45,6 +45,7 @@ class SavingGoal extends Model
     protected function casts(): array
     {
         return [
+            'user_id' => 'integer',
             'target_amount' => 'float',
             'saved_amount' => 'float',
             'deadline' => 'date',
