@@ -25,7 +25,7 @@ class TransactionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'type' => ['required', 'string', Rule::in([Transaction::TYPE_INCOME, Transaction::TYPE_EXPENSE])],
+            'type' => ['required', 'string', Rule::in(Transaction::TYPES)],
             'category' => ['required', 'string', 'max:50', Rule::in($this->allowedCategories())],
             'amount' => ['required', 'numeric', 'gt:0', 'max:9999999999999.99'],
             'note' => ['nullable', 'string', 'max:255'],
@@ -64,6 +64,7 @@ class TransactionRequest extends FormRequest
         return match ($this->input('type')) {
             Transaction::TYPE_INCOME => array_values((array) config('categories.income')),
             Transaction::TYPE_EXPENSE => array_values((array) config('categories.expense')),
+            Transaction::TYPE_SAVING => [Transaction::CATEGORY_SAVING],
             default => [],
         };
     }

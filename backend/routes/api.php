@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\SavingGoalController;
 use App\Http\Controllers\TransactionController;
 use Illuminate\Support\Facades\Route;
 
@@ -22,4 +23,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 
     Route::apiResource('transactions', TransactionController::class)->except(['create', 'edit']);
+
+    Route::apiResource('goals', SavingGoalController::class)->except(['create', 'edit']);
+    Route::post('/goals/{goal}/deposit', [SavingGoalController::class, 'deposit']);
 });

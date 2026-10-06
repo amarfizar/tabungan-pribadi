@@ -65,7 +65,7 @@ class TransactionUpdateTest extends TestCase
         ]);
     }
 
-    public function test_returns_422_with_message_when_type_is_saving(): void
+    public function test_rejects_changing_type_to_saving_with_guidance_message(): void
     {
         $user = User::factory()->create();
         $transaction = Transaction::factory()->for($user)->create();
@@ -76,7 +76,8 @@ class TransactionUpdateTest extends TestCase
             'amount' => 100000,
             'transaction_date' => now()->toDateString(),
         ])->assertStatus(422)
-            ->assertJsonPath('errors.type.0', 'Jenis transaksi tidak valid.');
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'Setoran tabungan harus dibuat melalui target tabungan.');
     }
 
     public function test_returns_404_and_keeps_data_when_transaction_belongs_to_another_user(): void

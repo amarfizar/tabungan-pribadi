@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\ApiResponse;
 use App\Http\Requests\TransactionRequest;
 use App\Http\Resources\TransactionResource;
+use App\Models\SavingGoal;
 use App\Models\Transaction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class TransactionController extends Controller
@@ -68,10 +70,23 @@ class TransactionController extends Controller
 
     /**
      * Simpan transaksi baru (PRD §6, §7).
+     *
+     * Setoran tabungan (type=saving) HARUS dibuat melalui endpoint deposit
+     * target tabungan agar saldo, target, dan status otomatis tersinkron.
      */
     public function store(TransactionRequest $request): JsonResponse
     {
-        $transaction = $request->user()->transactions()->create($request->validated());
+        $validated = $request->validated();
+
+        if ($validated['type'] === Transaction::TYPE_SAVING) {
+            return $this->errorResponse(
+                'Setoran tabungan harus dibuat melalui target tabungan.',
+                [],
+                422
+            );
+        }
+
+        $transaction = $request->user()->transactions()->create($validated);
 
         return $this->successResponse(
             new TransactionResource($transaction),
@@ -97,7 +112,32 @@ class TransactionController extends Controller
     {
         $this->ensureOwned($request, $transaction);
 
-        $transaction->update($request->validated());
+        $validated = $request->validated();
+
+        // Setoran tabungan tidak boleh diubah jenisnya ke income/expense,
+        // dan income/expense tidak boleh diubah ke saving.
+        if ($transaction->type === Transaction::TYPE_SAVING) {
+            if ($validated['type'] !== Transaction::TYPE_SAVING) {
+                return $this->errorResponse(
+                    'Jenis setoran tabungan tidak dapat diubah. Hapus setoran bila tidak diperlukan.',
+                    [],
+                    422
+                );
+            }
+        } elseif ($validated['type'] === Transaction::TYPE_SAVING) {
+            return $this->errorResponse(
+                'Setoran tabungan harus dibuat melalui target tabungan.',
+                [],
+                422
+            );
+        }
+
+        // Untuk transaksi saving, perlu sinkronisasi saved_amount target
+        if ($transaction->type === Transaction::TYPE_SAVING) {
+            return $this->updateSavingTransaction($transaction, $validated);
+        }
+
+        $transaction->update($validated);
 
         return $this->successResponse(
             new TransactionResource($transaction),
@@ -111,6 +151,10 @@ class TransactionController extends Controller
     public function destroy(Request $request, Transaction $transaction): JsonResponse
     {
         $this->ensureOwned($request, $transaction);
+
+        if ($transaction->type === Transaction::TYPE_SAVING && $transaction->saving_goal_id) {
+            return $this->deleteSavingTransaction($transaction);
+        }
 
         $transaction->delete();
 
@@ -148,5 +192,64 @@ class TransactionController extends Controller
             ],
             default => [null, null],
         };
+    }
+
+    /**
+     * Perbarui transaksi setoran tabungan dengan sinkronisasi target.
+     */
+    private function updateSavingTransaction(Transaction $transaction, array $validated): JsonResponse
+    {
+        return DB::transaction(function () use ($transaction, $validated) {
+            $goal = SavingGoal::whereKey($transaction->saving_goal_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $difference = (float) $validated['amount'] - $transaction->amount;
+            $newSavedAmount = $goal->saved_amount + $difference;
+
+            if ($newSavedAmount > $goal->target_amount) {
+                return $this->errorResponse('Setoran melebihi target tabungan.');
+            }
+
+            if ($difference > 0) {
+                $balance = $transaction->user->balance();
+                if ($difference > $balance) {
+                    return $this->errorResponse('Saldo tidak mencukupi untuk menambah setoran.');
+                }
+            }
+
+            $transaction->update($validated);
+
+            $goal->saved_amount = $newSavedAmount;
+            $goal->recalculateStatus();
+            $goal->save();
+
+            return $this->successResponse(
+                new TransactionResource($transaction->fresh()),
+                'Transaksi berhasil diperbarui'
+            );
+        });
+    }
+
+    /**
+     * Hapus transaksi setoran tabungan dengan sinkronisasi target.
+     */
+    private function deleteSavingTransaction(Transaction $transaction): JsonResponse
+    {
+        return DB::transaction(function () use ($transaction) {
+            $goal = SavingGoal::whereKey($transaction->saving_goal_id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($goal !== null) {
+                $goal->saved_amount = max(0.0, $goal->saved_amount - $transaction->amount);
+                $goal->recalculateStatus();
+                $goal->save();
+            }
+
+            $transaction->delete();
+
+            return $this->successResponse(null, 'Transaksi berhasil dihapus');
+        });
     }
 }

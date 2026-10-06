@@ -74,4 +74,19 @@ class SavingGoal extends Model
 
         return min(100.0, round(($this->saved_amount / $this->target_amount) * 100, 2));
     }
+
+    /**
+     * Status aktif/tercapai selalu diturunkan dari nominal terkumpul
+     * (PRD §36), sedangkan status arsip dipertahankan sampai dibuka kembali.
+     */
+    public function recalculateStatus(): void
+    {
+        if ($this->status === self::STATUS_ARCHIVED) {
+            return;
+        }
+
+        $this->status = $this->saved_amount >= $this->target_amount
+            ? self::STATUS_COMPLETED
+            : self::STATUS_ACTIVE;
+    }
 }

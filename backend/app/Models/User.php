@@ -43,4 +43,25 @@ class User extends Authenticatable
     {
         return $this->hasMany(SavingGoal::class);
     }
+
+    /**
+     * Saldo tersedia = total pemasukan - pengeluaran - tabungan (PRD §12).
+     *
+     * Tabungan dihitung keluar dari saldo karena uangnya dipindahkan ke
+     * target, bukan menjadi pengeluaran konsumtif.
+     */
+    public function balance(): float
+    {
+        $totals = $this->transactions()
+            ->selectRaw('type, COALESCE(SUM(amount), 0) as total')
+            ->groupBy('type')
+            ->pluck('total', 'type');
+
+        $income = (float) ($totals[Transaction::TYPE_INCOME] ?? 0);
+        $outgoing = (float) (
+            ($totals[Transaction::TYPE_EXPENSE] ?? 0) + ($totals[Transaction::TYPE_SAVING] ?? 0)
+        );
+
+        return $income - $outgoing;
+    }
 }

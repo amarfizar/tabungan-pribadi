@@ -87,7 +87,7 @@ class TransactionStoreTest extends TestCase
             ->assertJsonPath('errors.transaction_date.0', 'Format tanggal tidak valid.');
     }
 
-    public function test_returns_422_with_message_when_type_is_saving(): void
+    public function test_rejects_saving_type_with_guidance_message(): void
     {
         $response = $this->asUser(User::factory()->create())
             ->postJson('/api/transactions', array_merge($this->validPayload(), [
@@ -96,9 +96,21 @@ class TransactionStoreTest extends TestCase
             ]));
 
         $response->assertStatus(422)
-            ->assertJsonPath('errors.type.0', 'Jenis transaksi tidak valid.');
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'Setoran tabungan harus dibuat melalui target tabungan.');
 
         $this->assertDatabaseCount('transactions', 0);
+    }
+
+    public function test_returns_422_with_message_when_type_is_invalid(): void
+    {
+        $response = $this->asUser(User::factory()->create())
+            ->postJson('/api/transactions', array_merge($this->validPayload(), [
+                'type' => 'invalid-type',
+            ]));
+
+        $response->assertStatus(422)
+            ->assertJsonPath('errors.type.0', 'Jenis transaksi tidak valid.');
     }
 
     /**
