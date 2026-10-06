@@ -64,4 +64,73 @@ class User extends Authenticatable
 
         return $income - $outgoing;
     }
+
+    /**
+     * Ringkasan transaksi per bulan (PRD §15, §28 dashboard/statistics).
+     *
+     * @return array{income: float, expense: float, saving: float, balance: float}
+     */
+    public function monthlyTotals(int $month, int $year): array
+    {
+        $totals = $this->transactions()
+            ->whereMonth('transaction_date', $month)
+            ->whereYear('transaction_date', $year)
+            ->selectRaw('type, COALESCE(SUM(amount), 0) as total')
+            ->groupBy('type')
+            ->pluck('total', 'type');
+
+        $income = (float) ($totals[Transaction::TYPE_INCOME] ?? 0);
+        $expense = (float) ($totals[Transaction::TYPE_EXPENSE] ?? 0);
+        $saving = (float) ($totals[Transaction::TYPE_SAVING] ?? 0);
+
+        return [
+            'income' => $income,
+            'expense' => $expense,
+            'saving' => $saving,
+            'balance' => $income - $expense - $saving,
+        ];
+    }
+
+    /**
+     * Breakdown kategori per bulan (PRD §15 statistics).
+     *
+     * @return array<string, float>
+     */
+    public function categoryBreakdown(int $month, int $year, string $type): array
+    {
+        return $this->transactions()
+            ->where('type', $type)
+            ->whereMonth('transaction_date', $month)
+            ->whereYear('transaction_date', $year)
+            ->selectRaw('category, COALESCE(SUM(amount), 0) as total')
+            ->groupBy('category')
+            ->orderByDesc('total')
+            ->pluck('total', 'category')
+            ->map(fn ($v) => (float) $v)
+            ->toArray();
+    }
+
+    /**
+     * 5 transaksi terbaru (PRD §13, §28 dashboard).
+     */
+    public function recentTransactions(int $limit = 5)
+    {
+        return $this->transactions()
+            ->with('savingGoal:id,name')
+            ->latest('transaction_date')
+            ->latest('id')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Target tabungan aktif (status=active) dengan progres.
+     */
+    public function activeGoals()
+    {
+        return $this->savingGoals()
+            ->where('status', SavingGoal::STATUS_ACTIVE)
+            ->latest('created_at')
+            ->get();
+    }
 }

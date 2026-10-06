@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SavingGoalController;
 use App\Http\Controllers\TransactionController;
 use Illuminate\Support\Facades\Route;
@@ -26,4 +27,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('goals', SavingGoalController::class)->except(['create', 'edit']);
     Route::post('/goals/{goal}/deposit', [SavingGoalController::class, 'deposit']);
+
+    Route::get('/dashboard', [DashboardController::class, 'index']);
+    Route::get('/statistics', [DashboardController::class, 'statistics']);
 });
